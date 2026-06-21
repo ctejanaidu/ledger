@@ -1,9 +1,11 @@
-# Ledger — dependencies (verified on Python 3.14)
+# Ledger — dependencies
+# Works on Python 3.11–3.13 (Streamlit Community Cloud) and 3.14 locally.
 # Data / ML / viz core
 pandas>=2.2
 numpy>=1.26
 scikit-learn>=1.4
 plotly>=5.20
+statsmodels>=0.14        # forecasting (walk-forward, prediction intervals)
 # Orchestration + LLM
 langgraph>=0.2
 langchain-anthropic>=0.2
@@ -11,14 +13,8 @@ pydantic>=2.6
 python-dotenv>=1.0
 # App
 streamlit>=1.30
-# Modeling (M3) — extras
-statsmodels>=0.14      # forecasting (M3+)
-shap>=0.45             # optional deeper explanations; permutation importance is the default
-# Optional gradient boosters — used automatically IF importable.
-# On macOS they need OpenMP:  brew install libomp
-# xgboost>=2.0
-# lightgbm>=4.0
 
-# Added in later milestones:
-#   M4 report export: weasyprint (or browser print-to-PDF)
-#   M5 tests: pytest
+# Optional, used automatically IF importable (kept out of the default install to keep
+# the cloud build light):
+#   xgboost / lightgbm  -> extra gradient boosters (need OpenMP; `brew install libomp` on macOS)
+#   shap                -> deeper local explanations (permutation importance is the default)

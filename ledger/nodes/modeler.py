@@ -119,7 +119,10 @@ def _preprocessor(df: pd.DataFrame, feats: list[str]) -> tuple[ColumnTransformer
         ("num", Pipeline([("imp", SimpleImputer(strategy="median")),
                           ("sc", StandardScaler())]), num),
         ("cat", Pipeline([("imp", SimpleImputer(strategy="most_frequent")),
-                          ("oh", OneHotEncoder(handle_unknown="ignore"))]), cat),
+                          # dense output: HistGradientBoosting rejects sparse, and
+                          # ColumnTransformer would otherwise emit sparse for
+                          # categorical-heavy data, breaking that model.
+                          ("oh", OneHotEncoder(handle_unknown="ignore", sparse_output=False))]), cat),
     ])
     return pre, num, cat
 
@@ -188,18 +191,26 @@ def modeler(state) -> dict:
     scored: dict[str, float] = {}  # internal higher-is-better CV score for selection
 
     for name, est in candidates.items():
-        pipe = Pipeline([("pre", pre), ("model", est)])
-        cv_internal = float(np.mean(cross_val_score(pipe, X_tr, y_tr, cv=cv, scoring=scoring)))
-        pipe.fit(X_tr, y_tr)
-        tm = _test_metrics(task, pipe, X_te, y_te)
+        try:  # one bad model must not crash the pipeline (esp. on uploaded data)
+            pipe = Pipeline([("pre", pre), ("model", est)])
+            cv_internal = float(np.mean(cross_val_score(pipe, X_tr, y_tr, cv=cv, scoring=scoring)))
+            pipe.fit(X_tr, y_tr)
+            tm = _test_metrics(task, pipe, X_te, y_te)
+        except Exception as exc:  # pragma: no cover
+            import sys
+            print(f"[ledger] model {name} failed, skipping: {exc}", file=sys.stderr)
+            continue
         cv_disp = -cv_internal if metric_name == "RMSE" else cv_internal
         results.append(ModelResult(
             name=name, primary_metric=metric_name,
             cv_score=round(cv_disp, 4), test_score=tm[metric_name], all_metrics=tm,
-            notes=f"class_weight=balanced" if task != "regression" else "",
+            notes="class_weight=balanced" if task != "regression" else "",
         ))
         fitted[name] = pipe
         scored[name] = cv_internal
+
+    if not scored:  # every model failed -> skip modeling rather than crash
+        return {"log": state.log + ["modeler: all candidate models failed -> skipped"]}
 
     # --- ensemble (soft-vote / average the panel) ---
     ens_result = None

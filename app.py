@@ -7,7 +7,9 @@ Run:  streamlit run app.py
 """
 from __future__ import annotations
 
+import os
 import tempfile
+from pathlib import Path
 
 import pandas as pd
 import streamlit as st
@@ -15,17 +17,41 @@ from dotenv import load_dotenv
 
 from ledger.config import SETTINGS
 from ledger.graph import run_analysis
+from ledger.llm import get_llm
 from ledger.nodes.qa import answer_question
 from ledger.report import render_report
 
 load_dotenv()
+
+
+def _ensure_default_dataset() -> str:
+    """On a fresh (cloud) deploy the demo CSV is gitignored — generate it on demand."""
+    p = Path(SETTINGS.default_dataset)
+    if not p.exists():
+        from data.generate_lending import generate
+        p.parent.mkdir(parents=True, exist_ok=True)
+        generate().to_csv(p, index=False)
+    return str(p)
+
 
 st.set_page_config(page_title="Ledger — AI Data Analyst", page_icon="📊", layout="wide")
 st.title("📊 Ledger — AI Data Analyst for Leadership")
 st.caption("Profiles your data, models it, builds dashboards, and answers your questions — "
            "stating its confidence and limitations.")
 
-mode = "🟢 LLM-enabled" if SETTINGS.has_api_key else "⚪ deterministic (set ANTHROPIC_API_KEY for narratives + Q&A)"
+# --- Bring-your-own-key: each visitor supplies their own Anthropic key (or none) ---
+user_key = st.sidebar.text_input(
+    "Anthropic API key (optional)", type="password",
+    help="Bring your own key to enable LLM narratives + smart Q&A. Left blank = "
+         "deterministic mode (modeling, charts, report still work). Your key is used only "
+         "for this session and never stored.")
+if user_key:
+    os.environ["ANTHROPIC_API_KEY"] = user_key
+else:
+    os.environ.pop("ANTHROPIC_API_KEY", None)
+get_llm.cache_clear()  # pick up the current key state
+
+mode = "🟢 LLM-enabled" if SETTINGS.has_api_key else "⚪ deterministic (add a key for narratives + Q&A)"
 st.sidebar.markdown(f"**Mode:** {mode}")
 
 uploaded = st.sidebar.file_uploader("Upload a CSV", type=["csv"])
@@ -42,9 +68,9 @@ if run:
             fh.write(uploaded.getbuffer())
             path = fh.name
     else:
-        path = SETTINGS.default_dataset
+        path = _ensure_default_dataset()
         st.sidebar.info("Using flagship lending demo dataset.")
-    with st.spinner("Analyzing…"):
+    with st.spinner("Analyzing… (training models can take ~15s)"):
         st.session_state.state = run_analysis(path, question or None)
 
 state = st.session_state.state
