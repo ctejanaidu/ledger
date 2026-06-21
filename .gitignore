@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+outputs/
+.DS_Store
+.ipynb_checkpoints/
+*.egg-info/
+
+# Data is regenerable (lending) or user-downloaded (creditcard / Kaggle) — keep the
+# repo lean and avoid committing a 144MB file or redistributing Kaggle data.
+data/*.csv
+data/*.parquet

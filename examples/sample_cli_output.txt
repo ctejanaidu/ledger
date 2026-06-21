@@ -1,0 +1,45 @@
+$ python run.py data/sample_lending.csv "What is driving our loss rate and what should we do?"
+
+=== Ledger — running in LLM-enabled mode ===
+Dataset: data/sample_lending.csv
+
+--- DATA PROFILE ---
+8,000 rows x 14 columns. Quality flags -> loan_id: possible_id.
+Detected time column: issue_date. Likely target(s): default.
+
+--- FINDINGS ---
+  [  high] Overall default rate is 25.22% across 8,000 records (2,018 positive cases).
+  [  high] 'grade' is the strongest categorical driver of default: rate ranges
+           18.6%-50.9% (highest for grade=E at 50.9%).
+  [  high] Among numeric features, 'int_rate' is most associated with default (r=+0.16).
+  [medium] Default rate is rising over time: 23.1% -> 24.1% (Jan 2023 -> Dec 2024).
+  [medium] Default rate moved +4.6% (23.0%->27.6%) earlier vs recent. Decomposing by
+           'grade': within-segment rate change +4.8% vs mix shift -0.2% -> driven mainly
+           by within-segment deterioration, concentrated in grade=B.   [diagnostician]
+  [  high] Best model is LogisticRegression with held-out ROC-AUC=0.703 (CV 0.693);
+           top drivers: grade, dti, fico_score. Raw accuracy 0.654.       [modeler]
+
+--- PROJECTIONS (with 80% intervals + backtest) ---
+  default rate @ Jan 2025: 29.6% [26.1%, 33.2%]  (backtest MAE 0.019, beats_naive=True)
+  default rate @ Feb 2025: 30.0% [26.4%, 33.6%]  (backtest MAE 0.019, beats_naive=True)
+  default rate @ Mar 2025: 30.3% [26.7%, 34.0%]  (backtest MAE 0.019, beats_naive=True)
+
+--- VALIDATOR --- overall confidence: high
+  - Independent recompute confirms the headline default rate (25.22%).
+  - Model results come from a single held-out split -> avoid 'production-ready' claims.
+  - Do NOT use overclaiming words (production-ready, guaranteed, proven, ...).
+
+--- EXECUTIVE SUMMARY (BLUF) ---
+Loan grade is the strongest default driver (18.6%-50.9%, peaking at grade E) across an
+independently confirmed 25.22% baseline. The best model (LogisticRegression, ROC-AUC
+0.703) shows weak-to-moderate discrimination, evaluated on a single held-out split
+rather than validated over time. Default rates appear to be rising (~23%->27.6%), driven
+mainly by within-segment deterioration in grade B, though recent periods may be immature
+and should not be over-read. Overall confidence: medium-to-high.
+
+--- Q&A (Part 3 demo) ---
+  Q: Which model gave the highest accuracy?
+  A: Accuracy isn't the right metric here. Models were selected by ROC-AUC; the best is
+     LogisticRegression (ROC-AUC 0.703). A high "accuracy" can be misleading. [grounded]
+
+--- REPORT --- wrote outputs/report.html  (open in a browser; Print -> Save as PDF)
