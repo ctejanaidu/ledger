@@ -111,6 +111,8 @@ def test_validator_bans_overclaims_and_sets_confidence():
 
 
 if __name__ == "__main__":
+    import sys
+
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     passed = 0
     for t in tests:
@@ -123,3 +125,5 @@ if __name__ == "__main__":
         except Exception as e:  # noqa
             print(f"ERROR {t.__name__}: {e!r}")
     print(f"\n{passed}/{len(tests)} eval checks passed")
+    # Non-zero exit on any failure so CI (and shells) can detect it.
+    sys.exit(0 if passed == len(tests) else 1)

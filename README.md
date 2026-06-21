@@ -1,5 +1,9 @@
 # 📊 Ledger — An Agentic AI Data Analyst for Leadership
 
+[![CI](https://github.com/ctejanaidu/ledger/actions/workflows/ci.yml/badge.svg)](https://github.com/ctejanaidu/ledger/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/python-3.11–3.13-blue.svg)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
 Give Ledger a dataset. It profiles the data, models it, builds a leadership-ready
 dashboard, and then **answers leadership's questions about its own work** — always
 stating its confidence and limitations.
