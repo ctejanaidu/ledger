@@ -41,3 +41,22 @@ def complete(prompt: str, *, fast: bool = False, fallback: str = "") -> str:
         print(f"[ledger] LLM call failed ({'fast' if fast else 'reasoning'}): {exc}",
               file=sys.stderr)
         return fallback or f"[LLM call failed: {exc}]"
+
+
+_ROLE_MAP = {"user": "human", "assistant": "ai", "system": "system",
+             "human": "human", "ai": "ai"}
+
+
+def chat(messages: list[tuple[str, str]], *, fast: bool = False, fallback: str = "") -> str:
+    """Multi-turn completion. `messages` is a list of (role, content) tuples where
+    role is system/user/assistant. Returns `fallback` when no LLM is available."""
+    llm = get_llm(fast=fast)
+    if llm is None:
+        return fallback
+    lc_msgs = [(_ROLE_MAP.get(r, "human"), c) for r, c in messages]
+    try:
+        return llm.invoke(lc_msgs).content
+    except Exception as exc:  # pragma: no cover - network/credential issues
+        import sys
+        print(f"[ledger] chat call failed: {exc}", file=sys.stderr)
+        return fallback or f"[chat failed: {exc}]"

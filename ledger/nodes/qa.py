@@ -8,7 +8,7 @@ grounded answers.
 """
 from __future__ import annotations
 
-from ..llm import complete
+from ..llm import chat, complete
 
 
 def _grounded_context(state) -> str:
@@ -81,3 +81,25 @@ def answer_question(state, question: str) -> str:
         fast=False,
         fallback=_fallback_answer(question, context, state),
     )
+
+
+_CHAT_SYSTEM = (
+    "You are a data analyst in a live conversation with a leadership team about a dataset "
+    "you just analyzed. Ground EVERY answer in the context below — never invent numbers. "
+    "Use the conversation so far to resolve follow-ups (e.g. 'why?', 'what about the second "
+    "model?', 'and the riskiest segment?'). Keep answers concise and executive; when you "
+    "state a result, end with a short confidence note. If the context can't answer, say so "
+    "and suggest what analysis would.\n\nGROUNDED CONTEXT:\n{context}"
+)
+
+
+def converse(state, history: list[dict]) -> str:
+    """Multi-turn chat. `history` is a list of {'role','content'} (last item = newest
+    user turn). Grounded in the agent's artifacts; falls back to keyword routing
+    on the latest user message when no API key is set."""
+    context = _grounded_context(state)
+    messages: list[tuple[str, str]] = [("system", _CHAT_SYSTEM.format(context=context))]
+    for m in history[-12:]:  # cap context window to recent turns
+        messages.append((m["role"], m["content"]))
+    last_user = next((m["content"] for m in reversed(history) if m["role"] == "user"), "")
+    return chat(messages, fast=False, fallback=_fallback_answer(last_user, context, state))

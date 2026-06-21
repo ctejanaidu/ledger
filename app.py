@@ -18,7 +18,7 @@ from dotenv import load_dotenv
 from ledger.config import SETTINGS
 from ledger.graph import run_analysis
 from ledger.llm import get_llm
-from ledger.nodes.qa import answer_question
+from ledger.nodes.qa import converse
 from ledger.report import render_report
 
 load_dotenv()
@@ -72,6 +72,7 @@ if run:
         st.sidebar.info("Using flagship lending demo dataset.")
     with st.spinner("Analyzing… (training models can take ~15s)"):
         st.session_state.state = run_analysis(path, question or None)
+    st.session_state.chat = []  # fresh conversation for a new dataset
 
 state = st.session_state.state
 if state is None:
@@ -109,8 +110,44 @@ with st.expander("Data profile"):
     st.write(state.profile.quality_summary)
     st.dataframe(pd.DataFrame([c.model_dump() for c in state.profile.columns]))
 
-# --- Q&A ---
-st.subheader("Ask the analyst")
-q = st.text_input("Your question", placeholder="Which model won? What does chart 2 show?")
-if q:
-    st.markdown(answer_question(state, q))
+# --- Conversational Q&A (multi-turn chat) ---
+st.subheader("💬 Chat with the analyst")
+st.caption("Have a conversation — ask follow-ups like *“why?”*, *“what about the second "
+           "model?”*, *“which segment should we act on first?”*. Answers stay grounded in the "
+           "analysis above.")
+
+if "chat" not in st.session_state:
+    st.session_state.chat = []
+
+# starter suggestions (only before the conversation begins)
+if not st.session_state.chat:
+    cols = st.columns(3)
+    starters = ["What are the top risks I should know about?",
+                "Which model won and why?",
+                "What should we do first?"]
+    for col, s in zip(cols, starters):
+        if col.button(s, use_container_width=True):
+            st.session_state.chat.append({"role": "user", "content": s})
+            st.rerun()
+
+# render the conversation so far
+for m in st.session_state.chat:
+    with st.chat_message(m["role"]):
+        st.markdown(m["content"])
+
+# answer a pending user turn (from a starter button or a previous run)
+if st.session_state.chat and st.session_state.chat[-1]["role"] == "user":
+    with st.chat_message("assistant"):
+        with st.spinner("Thinking…"):
+            answer = converse(state, st.session_state.chat)
+        st.markdown(answer)
+    st.session_state.chat.append({"role": "assistant", "content": answer})
+
+# chat input (pinned to the bottom by Streamlit)
+if prompt := st.chat_input("Ask about the data, models, or results…"):
+    st.session_state.chat.append({"role": "user", "content": prompt})
+    st.rerun()
+
+if st.session_state.chat and st.sidebar.button("🗑 Clear conversation"):
+    st.session_state.chat = []
+    st.rerun()
