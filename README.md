@@ -1,4 +1,4 @@
-# 📊 Ledger — An Agentic AI Data Analyst for Leadership
+# 📊 Ledger — Your AI Data Analyst Sidekick
 
 [![Live demo](https://img.shields.io/badge/🚀_live_demo-ledger--analyst.streamlit.app-ff4b4b)](https://ledger-analyst.streamlit.app)
 [![CI](https://github.com/ctejanaidu/ledger/actions/workflows/ci.yml/badge.svg)](https://github.com/ctejanaidu/ledger/actions/workflows/ci.yml)
@@ -8,9 +8,9 @@
 **🚀 Live demo → https://ledger-analyst.streamlit.app**
 &nbsp;(runs in deterministic mode out of the box; paste your own Anthropic key in the sidebar for the LLM narratives + smart Q&A)
 
-Give Ledger a dataset. It profiles the data, models it, builds a leadership-ready
-dashboard, and then **answers leadership's questions about its own work** — always
-stating its confidence and limitations.
+Give Ledger any dataset. It profiles the data, models it, builds a presentable
+dashboard, and then **answers your questions about its own work** — always stating
+its confidence and limitations.
 
 Unlike "chat with your CSV" demos, Ledger is built around **data-science rigor**:
 the right metric (not raw accuracy), leakage-safe validation, projections with

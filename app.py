@@ -1,7 +1,7 @@
 """Ledger — Streamlit app (SPEC §9).
 
-Upload a dataset (or use the flagship lending demo), see the profile, the
-leadership dashboard, the BLUF summary, and ask the agent questions live.
+Upload any dataset, see the profile, dashboard, and summary, and chat with the
+analyst about the results.
 
 Run:  streamlit run app.py
 """
@@ -23,6 +23,10 @@ from ledger.report import render_report
 
 load_dotenv()
 
+# Chat avatars (easy to swap to any emoji or image URL)
+USER_AVATAR = "🧑‍💻"
+BOT_AVATAR = "🦉"
+
 
 def _ensure_default_dataset() -> str:
     """On a fresh (cloud) deploy the demo CSV is gitignored — generate it on demand."""
@@ -34,10 +38,38 @@ def _ensure_default_dataset() -> str:
     return str(p)
 
 
-st.set_page_config(page_title="Ledger — AI Data Analyst", page_icon="📊", layout="wide")
-st.title("📊 Ledger — AI Data Analyst for Leadership")
-st.caption("Profiles your data, models it, builds dashboards, and answers your questions — "
-           "stating its confidence and limitations.")
+st.set_page_config(page_title="Ledger — your AI data sidekick", page_icon="📊", layout="wide")
+
+# --- look & feel: subtle animations injected via CSS ---
+st.markdown("""
+<style>
+/* slide + fade the main content in on load */
+section.main > div { animation: ledgerFade .6s ease-out; }
+@keyframes ledgerFade { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform:none; } }
+/* animated gradient wordmark */
+.ledger-title { font-size: 2.3rem; font-weight: 800; margin: 0 0 .1rem 0; line-height: 1.15;
+  background: linear-gradient(90deg,#2f6fed,#15a07a,#e8833a,#2f6fed);
+  background-size: 300% auto; -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; animation: ledgerShine 7s linear infinite; }
+@keyframes ledgerShine { to { background-position: 300% center; } }
+.ledger-sub { color:#6b7280; font-size: 1rem; margin-bottom: .4rem; }
+/* lift expanders / cards on hover */
+div[data-testid="stExpander"] { transition: transform .15s ease, box-shadow .15s ease; }
+div[data-testid="stExpander"]:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(31,42,68,.08); }
+/* chat bubbles fade in */
+div[data-testid="stChatMessage"] { animation: ledgerFade .45s ease-out; }
+/* buttons: gentle pop */
+.stButton > button { transition: transform .08s ease, box-shadow .15s ease; border-radius: 10px; }
+.stButton > button:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(47,111,237,.18); }
+</style>
+""", unsafe_allow_html=True)
+
+st.markdown('<div class="ledger-title">📊 Ledger — your AI data sidekick</div>',
+            unsafe_allow_html=True)
+st.markdown('<div class="ledger-sub">Drop in any dataset and Ledger does the analyst grunt '
+            "work — pokes around, builds the models, draws the charts, and chats with you about "
+            "what it all means (owning up to what it’s not sure about). No data-science degree "
+            'required. 🪄</div>', unsafe_allow_html=True)
 
 # --- Bring-your-own-key: each visitor supplies their own Anthropic key (or none) ---
 user_key = st.sidebar.text_input(
@@ -73,8 +105,6 @@ target_choice = st.sidebar.selectbox(
          "e.g. a regression target like a price or amount.")
 target = None if target_choice == "(auto-detect)" else target_choice
 
-question = st.sidebar.text_input("Leadership question (optional)",
-                                 placeholder="e.g. what's driving our losses?")
 run = st.sidebar.button("Run analysis", type="primary")
 
 if "state" not in st.session_state:
@@ -89,7 +119,7 @@ if run:
         path = _ensure_default_dataset()
         st.sidebar.info("Using flagship lending demo dataset.")
     with st.spinner("Analyzing… (training models can take ~15s)"):
-        st.session_state.state = run_analysis(path, question or None, target)
+        st.session_state.state = run_analysis(path, None, target)
     st.session_state.chat = []  # fresh conversation for a new dataset
 
 state = st.session_state.state
@@ -150,12 +180,12 @@ if not st.session_state.chat:
 
 # render the conversation so far
 for m in st.session_state.chat:
-    with st.chat_message(m["role"]):
+    with st.chat_message(m["role"], avatar=USER_AVATAR if m["role"] == "user" else BOT_AVATAR):
         st.markdown(m["content"])
 
 # answer a pending user turn (from a starter button or a previous run)
 if st.session_state.chat and st.session_state.chat[-1]["role"] == "user":
-    with st.chat_message("assistant"):
+    with st.chat_message("assistant", avatar=BOT_AVATAR):
         with st.spinner("Thinking…"):
             answer = converse(state, st.session_state.chat)
         st.markdown(answer)
