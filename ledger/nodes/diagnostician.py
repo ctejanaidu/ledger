@@ -14,6 +14,7 @@ from __future__ import annotations
 import pandas as pd
 
 from ..state import Finding
+from ..targeting import resolve_target
 
 _MIN_GROUP = 30
 
@@ -38,9 +39,8 @@ def _segment_col(df: pd.DataFrame, target: str, time_col: str) -> str | None:
 
 def diagnostician(state) -> dict:
     profile = state.profile
-    target = next((c for c in (profile.target_candidates or [])
-                   if profile and c.lower() in {"default", "target", "label", "class", "fraud", "churn"}),
-                  None)
+    cols = [c.name for c in profile.columns] if profile else []
+    target = resolve_target(state.target, profile.target_candidates if profile else [], cols)
     tcol = profile.time_column if profile else None
     if not target or not tcol:
         return {"log": state.log + ["diagnostician: no time+target -> skipped"]}

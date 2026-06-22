@@ -26,7 +26,16 @@ def _confidence(n: int) -> str:
     return "high" if n >= 500 else "medium" if n >= _MIN_GROUP else "low"
 
 
-def _pick_target(df: pd.DataFrame, profile) -> str | None:
+def _pick_target(df: pd.DataFrame, profile, explicit: str | None = None) -> str | None:
+    # The baseline analyst does binary rate/segment analysis, so it only adopts a
+    # BINARY target. An explicit non-binary (regression) target falls through to None
+    # here and is handled by the modeler instead.
+    if explicit:
+        if explicit in df.columns:
+            s = df[explicit].dropna()
+            if s.nunique() == 2 and pd.api.types.is_numeric_dtype(df[explicit]):
+                return explicit
+        return None
     for cand in profile.target_candidates:
         if df[cand].dropna().nunique() == 2 and pd.api.types.is_numeric_dtype(df[cand]):
             return cand
@@ -69,7 +78,7 @@ def analyst(state) -> dict:
     chart_specs: list[ChartSpec] = []
     figures: list[str] = []
 
-    target = _pick_target(df, profile)
+    target = _pick_target(df, profile, state.target)
     if target is None:
         return {
             "findings": [Finding(

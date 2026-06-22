@@ -149,6 +149,28 @@ def test_regression_uses_continuous_features():
     assert selected.all_metrics["R2"] > 0.8, selected.all_metrics
 
 
+def test_explicit_target_selection():
+    """A target that auto-detection can't name (e.g. 'house_price') still models when
+    the user picks it explicitly."""
+    import os
+    import tempfile
+
+    import numpy as np
+    import pandas as pd
+    rng = np.random.default_rng(1)
+    n = 1200
+    sqft, beds = rng.normal(2000, 500, n), rng.integers(1, 6, n)
+    df = pd.DataFrame({"sqft": sqft, "beds": beds,
+                       "house_price": 100 * sqft + 5000 * beds + rng.normal(0, 8000, n)})
+    path = os.path.join(tempfile.gettempdir(), "ledger_target_eval.csv")
+    df.to_csv(path, index=False)
+    auto = run_analysis(path)                       # nothing auto-detected
+    assert auto.model_leaderboard is None
+    picked = run_analysis(path, target="house_price")  # explicit override
+    assert picked.model_leaderboard is not None
+    assert picked.model_leaderboard.task_type == "regression"
+
+
 if __name__ == "__main__":
     import sys
 

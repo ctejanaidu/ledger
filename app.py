@@ -55,6 +55,24 @@ mode = "🟢 LLM-enabled" if SETTINGS.has_api_key else "⚪ deterministic (add a
 st.sidebar.markdown(f"**Mode:** {mode}")
 
 uploaded = st.sidebar.file_uploader("Upload a CSV", type=["csv"])
+
+# Resolve the columns of the chosen dataset so the user can pick a target column.
+try:
+    if uploaded is not None:
+        columns = list(pd.read_csv(uploaded, nrows=0).columns)
+        uploaded.seek(0)
+    else:
+        columns = list(pd.read_csv(_ensure_default_dataset(), nrows=0).columns)
+except Exception:
+    columns = []
+
+target_choice = st.sidebar.selectbox(
+    "Target column", ["(auto-detect)"] + columns,
+    help="The column to model/predict. Auto-detect handles common names "
+         "(default, target, label, class, churn…). Pick explicitly for anything else — "
+         "e.g. a regression target like a price or amount.")
+target = None if target_choice == "(auto-detect)" else target_choice
+
 question = st.sidebar.text_input("Leadership question (optional)",
                                  placeholder="e.g. what's driving our losses?")
 run = st.sidebar.button("Run analysis", type="primary")
@@ -71,7 +89,7 @@ if run:
         path = _ensure_default_dataset()
         st.sidebar.info("Using flagship lending demo dataset.")
     with st.spinner("Analyzing… (training models can take ~15s)"):
-        st.session_state.state = run_analysis(path, question or None)
+        st.session_state.state = run_analysis(path, question or None, target)
     st.session_state.chat = []  # fresh conversation for a new dataset
 
 state = st.session_state.state

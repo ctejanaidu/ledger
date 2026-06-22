@@ -30,23 +30,16 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 from ..state import ChartSpec, Finding, ModelLeaderboard, ModelResult
+from ..targeting import resolve_target
 from ..tools import charts
 
 RS = 42
 MAX_ROWS = 80_000          # subsample cap (prevalence-preserving) for tractability
 PERM_SAMPLE = 5_000        # rows used for permutation importance
 OUTPUT_DIR = "outputs/charts"
-_NAMED = {"default", "target", "label", "class", "fraud", "churn", "y"}
 
 
 # --- problem framing --------------------------------------------------------
-def _pick_target(df: pd.DataFrame, profile) -> str | None:
-    for c in profile.target_candidates:
-        if c.lower() in _NAMED:
-            return c
-    return profile.target_candidates[0] if profile.target_candidates else None
-
-
 def _task_type(y: pd.Series) -> str:
     nun = y.nunique(dropna=True)
     if nun == 2:
@@ -157,7 +150,7 @@ def _subsample(df, target, task):
 def modeler(state) -> dict:
     df = pd.read_csv(state.dataset_path)
     profile = state.profile
-    target = _pick_target(df, profile)
+    target = resolve_target(state.target, profile.target_candidates, list(df.columns))
     if target is None:
         return {"log": state.log + ["modeler: no target -> skipped"]}
 

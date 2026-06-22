@@ -25,12 +25,13 @@ load_dotenv()
 def main() -> None:
     dataset = sys.argv[1] if len(sys.argv) > 1 else SETTINGS.default_dataset
     question = sys.argv[2] if len(sys.argv) > 2 else None
+    target = sys.argv[3] if len(sys.argv) > 3 else None  # optional: force the target column
 
     mode = "LLM-enabled" if SETTINGS.has_api_key else "deterministic (no API key)"
     print(f"\n=== Ledger — running in {mode} mode ===")
-    print(f"Dataset: {dataset}\n")
+    print(f"Dataset: {dataset}" + (f"  (target={target})" if target else "") + "\n")
 
-    state = run_analysis(dataset, question)
+    state = run_analysis(dataset, question, target)
 
     print("--- DATA PROFILE ---")
     print(state.profile.quality_summary, "\n")

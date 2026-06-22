@@ -16,6 +16,7 @@ import plotly.graph_objects as go
 import statsmodels.api as sm
 
 from ..state import ChartSpec, Projection
+from ..targeting import resolve_target
 from ..tools import charts
 
 OUTPUT_DIR = "outputs/charts"
@@ -34,9 +35,8 @@ def _ols_forecast(y: np.ndarray, steps: int, alpha: float = 0.20):
 
 def forecaster(state) -> dict:
     profile = state.profile
-    target = next((c for c in (profile.target_candidates or [])
-                   if profile and c.lower() in {"default", "target", "label", "class", "fraud", "churn"}),
-                  None)
+    cols = [c.name for c in profile.columns] if profile else []
+    target = resolve_target(state.target, profile.target_candidates if profile else [], cols)
     tcol = profile.time_column if profile else None
     if not target or not tcol:
         return {"log": state.log + ["forecaster: no time+target -> skipped"]}

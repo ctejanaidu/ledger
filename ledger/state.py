@@ -92,6 +92,7 @@ class DashboardSpec(BaseModel):
 class AnalysisState(BaseModel):
     dataset_path: str
     question: Optional[str] = None
+    target: Optional[str] = None   # explicit user-chosen target column (overrides auto-detect)
 
     profile: Optional[DatasetProfile] = None
     plan: list[str] = Field(default_factory=list)

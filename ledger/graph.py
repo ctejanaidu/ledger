@@ -46,10 +46,14 @@ def build_graph():
     return g.compile()
 
 
-def run_analysis(dataset_path: str, question: str | None = None) -> AnalysisState:
-    """Run the full pipeline and return the final state."""
+def run_analysis(dataset_path: str, question: str | None = None,
+                 target: str | None = None) -> AnalysisState:
+    """Run the full pipeline and return the final state.
+
+    `target` optionally forces which column is the modeling target (overrides
+    auto-detection — the "pick your target column" feature)."""
     graph = build_graph()
-    initial = AnalysisState(dataset_path=dataset_path, question=question)
+    initial = AnalysisState(dataset_path=dataset_path, question=question, target=target)
     result = graph.invoke(initial)
     # langgraph returns a dict-like; coerce back to our typed model
     return AnalysisState.model_validate(result)
