@@ -17,7 +17,11 @@ def _quality_flags(s: pd.Series, n_rows: int) -> list[str]:
     miss = s.isna().mean()
     if miss > 0.20:
         flags.append("high_missing")
-    if s.nunique(dropna=True) == n_rows and n_rows > 0:
+    # All-unique columns look like IDs — but ONLY if they're strings or integers.
+    # An all-unique float is a continuous measurement (a real feature), not an ID;
+    # flagging it would wrongly drop it from modeling.
+    if (s.nunique(dropna=True) == n_rows and n_rows > 0
+            and not pd.api.types.is_float_dtype(s)):
         flags.append("possible_id")
     if s.nunique(dropna=True) <= 1:
         flags.append("constant")

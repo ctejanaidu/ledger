@@ -110,6 +110,45 @@ def test_validator_bans_overclaims_and_sets_confidence():
     assert any("recompute" in g.lower() for g in s.guardrails)
 
 
+# --- regression coverage (the modeler must handle continuous targets too) ---
+_REG_STATE = None
+
+
+def _reg_state():
+    """A regression dataset with continuous, all-unique features (the case that
+    previously broke: KFold vs StratifiedKFold, and floats wrongly flagged as IDs)."""
+    global _REG_STATE
+    if _REG_STATE is None:
+        import os
+        import tempfile
+
+        import numpy as np
+        import pandas as pd
+        rng = np.random.default_rng(0)
+        n = 1500
+        x1, x2 = rng.normal(0, 1, n), rng.normal(0, 1, n)
+        df = pd.DataFrame({"x1": x1, "x2": x2, "target": 3 * x1 - 2 * x2 + rng.normal(0, 0.5, n)})
+        path = os.path.join(tempfile.gettempdir(), "ledger_reg_eval.csv")
+        df.to_csv(path, index=False)
+        _REG_STATE = run_analysis(path)
+    return _REG_STATE
+
+
+def test_modeler_handles_regression():
+    """Continuous target -> regression task selected by RMSE (not a classification metric)."""
+    lb = _reg_state().model_leaderboard
+    assert lb is not None and lb.task_type == "regression"
+    assert lb.candidates[0].primary_metric == "RMSE"
+
+
+def test_regression_uses_continuous_features():
+    """Continuous all-unique features must NOT be dropped as IDs — the model must fit well."""
+    lb = _reg_state().model_leaderboard
+    selected = next(r for r in lb.candidates + ([lb.ensemble] if lb.ensemble else [])
+                    if r.name == lb.selected)
+    assert selected.all_metrics["R2"] > 0.8, selected.all_metrics
+
+
 if __name__ == "__main__":
     import sys
 

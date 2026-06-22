@@ -24,7 +24,8 @@ from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.metrics import (accuracy_score, average_precision_score, brier_score_loss,
                              f1_score, mean_absolute_error, mean_squared_error,
                              r2_score, roc_auc_score)
-from sklearn.model_selection import StratifiedKFold, cross_val_score, train_test_split
+from sklearn.model_selection import (KFold, StratifiedKFold, cross_val_score,
+                                     train_test_split)
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
@@ -183,7 +184,10 @@ def modeler(state) -> dict:
 
     strat = y if task != "regression" else None
     X_tr, X_te, y_tr, y_te = train_test_split(X, y, test_size=0.2, random_state=RS, stratify=strat)
-    cv = StratifiedKFold(n_splits=3 if len(X_tr) > 20_000 else 5, shuffle=True, random_state=RS)
+    # StratifiedKFold needs discrete classes; regression must use plain KFold.
+    n_splits = 3 if len(X_tr) > 20_000 else 5
+    cv = (KFold(n_splits=n_splits, shuffle=True, random_state=RS) if task == "regression"
+          else StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=RS))
 
     candidates = _candidates(task)
     results: list[ModelResult] = []
