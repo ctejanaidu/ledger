@@ -30,7 +30,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 from ..state import ChartSpec, Finding, ModelLeaderboard, ModelResult
-from ..targeting import resolve_target
+from ..targeting import resolve_target, to_binary01
 from ..tools import charts
 
 RS = 42
@@ -223,7 +223,7 @@ def modeler(state) -> dict:
     # need enough positives to model responsibly
     if task != "regression":
         if not pd.api.types.is_numeric_dtype(y_all) or set(y_all.unique()) != {0, 1}:
-            y_all = pd.Series(pd.factorize(y_all)[0], index=y_all.index)
+            y_all, _ = to_binary01(y_all)  # event class -> 1 (keeps PR-AUC meaningful)
             df = df.assign(**{target: y_all})
         pos = int(y_all.sum())
         if pos < 15:

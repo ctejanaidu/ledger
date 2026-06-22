@@ -186,6 +186,27 @@ def test_user_technique_mismatch_is_reported():
     assert "could not be trained" in note
 
 
+def test_text_binary_target_is_analyzed():
+    """A Yes/No (text) target is detected, encoded to 0/1, and analyzed — not bounced to
+    'no binary target detected'."""
+    import os
+    import tempfile
+
+    import numpy as np
+    import pandas as pd
+    rng = np.random.default_rng(2)
+    n = 800
+    x = rng.normal(0, 1, n)
+    churn = np.where(rng.uniform(size=n) < 1 / (1 + np.exp(-x)), "Yes", "No")
+    path = os.path.join(tempfile.gettempdir(), "ledger_textbin_eval.csv")
+    pd.DataFrame({"x": x, "churn": churn}).to_csv(path, index=False)
+    s = run_analysis(path)
+    rate = next((f for f in s.findings if "rate is" in f.claim.lower()), None)
+    assert rate is not None and "positive class" in rate.claim.lower()
+    assert s.model_leaderboard is not None
+    assert s.model_leaderboard.task_type == "binary_classification"
+
+
 if __name__ == "__main__":
     import sys
 

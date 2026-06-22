@@ -16,6 +16,7 @@ from pathlib import Path
 import pandas as pd
 
 from ..state import ChartSpec, DashboardSpec, Finding
+from ..targeting import to_binary01
 from ..tools import charts
 
 OUTPUT_DIR = "outputs/charts"
@@ -26,24 +27,20 @@ def _confidence(n: int) -> str:
     return "high" if n >= 500 else "medium" if n >= _MIN_GROUP else "low"
 
 
+def _is_binary(s: pd.Series) -> bool:
+    return s.dropna().nunique() == 2
+
+
 def _pick_target(df: pd.DataFrame, profile, explicit: str | None = None) -> str | None:
     # The baseline analyst does binary rate/segment analysis, so it only adopts a
-    # BINARY target. An explicit non-binary (regression) target falls through to None
-    # here and is handled by the modeler instead.
+    # BINARY target (of ANY dtype — 0/1, 1/2, True/False, Yes/No). A non-binary
+    # explicit target (regression/multiclass) falls through to None and is handled
+    # by the modeler instead.
     if explicit:
-        if explicit in df.columns:
-            s = df[explicit].dropna()
-            if s.nunique() == 2 and pd.api.types.is_numeric_dtype(df[explicit]):
-                return explicit
-        return None
+        return explicit if (explicit in df.columns and _is_binary(df[explicit])) else None
     for cand in profile.target_candidates:
-        if df[cand].dropna().nunique() == 2 and pd.api.types.is_numeric_dtype(df[cand]):
+        if cand in df.columns and _is_binary(df[cand]):
             return cand
-    # fall back to any binary 0/1 numeric column
-    for c in df.columns:
-        s = df[c].dropna()
-        if s.nunique() == 2 and set(s.unique()) <= {0, 1}:
-            return c
     return None
 
 
@@ -80,25 +77,40 @@ def analyst(state) -> dict:
 
     target = _pick_target(df, profile, state.target)
     if target is None:
+        if state.target:  # user chose a non-binary target -> the modeler handles it
+            msg = (f"Target '{state.target}' isn't binary, so the baseline rate/segment "
+                   "analysis doesn't apply — see the model results below for the regression "
+                   "analysis and its drivers.")
+            lim = ["Baseline rate analysis is for binary targets; the modeler handles this one."]
+        else:
+            msg = ("No target column was auto-detected, so I ran descriptive profiling only. "
+                   "To unlock modeling, driver analysis, and forecasting, pick the column you "
+                   "want to predict in the sidebar 'Target column' dropdown.")
+            lim = ["Modeling and driver analysis need a target — choose one in the sidebar "
+                   "'Target column' dropdown."]
         return {
-            "findings": [Finding(
-                claim="No binary target detected; ran descriptive profiling only.",
-                confidence="low", method="target detection",
-                limitations=["Modeling/driver analysis needs a clear outcome column."])],
-            "log": state.log + ["analyst: no target"],
+            "findings": [Finding(claim=msg, confidence="low", method="target detection",
+                                 limitations=lim)],
+            "log": state.log + ["analyst: no binary target"],
         }
+
+    # Encode a (possibly text / boolean / 1-2) binary target to 0/1 for analysis.
+    y01, pos_label = to_binary01(df[target])
+    df = df.assign(**{target: y01})
 
     # --- Finding 1: overall outcome rate ---
     rate = float(df[target].mean())
+    pos_txt = "" if str(pos_label) in ("1", "True") else f" (positive class = {pos_label})"
     rate_limits = ["Pooled rate hides segment variation (see driver breakdown)."]
     if rate < 0.05 or rate > 0.95:
         rate_limits.append(
             f"Severe class imbalance ({rate:.2%} positive) — raw accuracy will be "
             "misleading; modeling must use ROC-AUC / PR-AUC and class-imbalance handling.")
     findings.append(Finding(
-        claim=f"Overall {target} rate is {rate:.2%} across {len(df):,} records "
+        claim=f"Overall {target} rate is {rate:.2%}{pos_txt} across {len(df):,} records "
               f"({int(df[target].sum()):,} positive cases).",
-        evidence={"rate": round(rate, 5), "n": len(df), "positives": int(df[target].sum())},
+        evidence={"rate": round(rate, 5), "n": len(df), "positives": int(df[target].sum()),
+                  "positive_class": str(pos_label)},
         confidence=_confidence(len(df)),
         method="mean of binary target",
         limitations=rate_limits,
