@@ -171,6 +171,21 @@ def test_explicit_target_selection():
     assert picked.model_leaderboard.task_type == "regression"
 
 
+def test_user_technique_added_to_panel():
+    """A valid user-requested technique is trained and appears in the leaderboard."""
+    s = run_analysis(SETTINGS.default_dataset, target="default", user_technique="Decision Tree")
+    names = [r.name for r in s.model_leaderboard.candidates]
+    assert any("Decision Tree" in n for n in names), names
+
+
+def test_user_technique_mismatch_is_reported():
+    """A technique that can't train (regression model on a classification task) is reported,
+    not silently dropped."""
+    s = run_analysis(SETTINGS.default_dataset, target="default", user_technique="Linear Regression")
+    note = (s.model_leaderboard.user_technique_note or "").lower()
+    assert "could not be trained" in note
+
+
 if __name__ == "__main__":
     import sys
 

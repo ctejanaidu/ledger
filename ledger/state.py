@@ -70,6 +70,7 @@ class ModelLeaderboard(BaseModel):
     ensemble: Optional[ModelResult] = None
     selected: str = ""
     selection_reason: str = ""
+    user_technique_note: Optional[str] = None  # outcome of a user-requested technique
 
 
 # --- Part 2: dashboard artifacts --------------------------------------------
@@ -93,6 +94,7 @@ class AnalysisState(BaseModel):
     dataset_path: str
     question: Optional[str] = None
     target: Optional[str] = None   # explicit user-chosen target column (overrides auto-detect)
+    user_technique: Optional[str] = None  # ML technique the user asked to include in the panel
 
     profile: Optional[DatasetProfile] = None
     plan: list[str] = Field(default_factory=list)

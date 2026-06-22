@@ -106,6 +106,68 @@ def _candidates(task: str):
     return models
 
 
+# --- user-requested technique (optional) ------------------------------------
+SLOW_ROW_LIMIT = 20_000  # don't run O(n^2)-ish techniques on big data (would hang)
+TECHNIQUE_CHOICES = [
+    "Logistic Regression", "Linear Regression", "Ridge Regression", "Lasso Regression",
+    "Random Forest", "Gradient Boosting", "Decision Tree", "K-Nearest Neighbors",
+    "SVM", "Naive Bayes", "Neural Network (MLP)",
+]
+_ALIASES = {
+    "logistic": "Logistic Regression", "logreg": "Logistic Regression",
+    "linear": "Linear Regression", "ols": "Linear Regression",
+    "ridge": "Ridge Regression", "lasso": "Lasso Regression",
+    "rf": "Random Forest", "randomforest": "Random Forest",
+    "gbm": "Gradient Boosting", "gradient boosting": "Gradient Boosting", "xgboost": "Gradient Boosting",
+    "tree": "Decision Tree", "cart": "Decision Tree",
+    "knn": "K-Nearest Neighbors", "svc": "SVM", "svr": "SVM",
+    "support vector machine": "SVM", "naive bayes": "Naive Bayes", "nb": "Naive Bayes",
+    "mlp": "Neural Network (MLP)", "neural network": "Neural Network (MLP)", "nn": "Neural Network (MLP)",
+}
+
+
+def _technique_registry() -> dict:
+    from sklearn.linear_model import Lasso, Ridge
+    from sklearn.naive_bayes import GaussianNB
+    from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
+    from sklearn.neural_network import MLPClassifier, MLPRegressor
+    from sklearn.svm import SVC, SVR
+    from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
+    return {
+        "Logistic Regression": dict(clf=lambda: LogisticRegression(max_iter=1000, class_weight="balanced"), reg=None, slow=False),
+        "Linear Regression":   dict(clf=None, reg=lambda: LinearRegression(), slow=False),
+        "Ridge Regression":    dict(clf=None, reg=lambda: Ridge(), slow=False),
+        "Lasso Regression":    dict(clf=None, reg=lambda: Lasso(), slow=False),
+        "Random Forest":       dict(clf=lambda: RandomForestClassifier(n_estimators=200, n_jobs=-1, class_weight="balanced", random_state=RS), reg=lambda: RandomForestRegressor(n_estimators=200, n_jobs=-1, random_state=RS), slow=False),
+        "Gradient Boosting":   dict(clf=lambda: HistGradientBoostingClassifier(class_weight="balanced", random_state=RS), reg=lambda: HistGradientBoostingRegressor(random_state=RS), slow=False),
+        "Decision Tree":       dict(clf=lambda: DecisionTreeClassifier(class_weight="balanced", random_state=RS), reg=lambda: DecisionTreeRegressor(random_state=RS), slow=False),
+        "K-Nearest Neighbors": dict(clf=lambda: KNeighborsClassifier(), reg=lambda: KNeighborsRegressor(), slow=True),
+        "SVM":                 dict(clf=lambda: SVC(probability=True, class_weight="balanced", random_state=RS), reg=lambda: SVR(), slow=True),
+        "Naive Bayes":         dict(clf=lambda: GaussianNB(), reg=None, slow=False),
+        "Neural Network (MLP)": dict(clf=lambda: MLPClassifier(max_iter=500, random_state=RS), reg=lambda: MLPRegressor(max_iter=500, random_state=RS), slow=False),
+    }
+
+
+def _resolve_user_technique(name: str, task: str, n_train: int):
+    """Return (estimator_or_None, resolved_name_or_None, note_or_None)."""
+    reg = _technique_registry()
+    key = name.strip()
+    resolved = next((k for k in reg if k.lower() == key.lower()), None) or _ALIASES.get(key.lower())
+    if resolved is None:
+        return None, None, f"Requested technique '{name}' isn't recognized — used the auto-selected panel instead."
+    spec = reg[resolved]
+    factory = spec["reg"] if task == "regression" else spec["clf"]
+    if factory is None:
+        kind = "regression" if task == "regression" else "classification"
+        other = "classification" if task == "regression" else "regression"
+        return None, resolved, (f"'{resolved}' is a {other} technique, but this is a {kind} "
+                                "problem — it could not be trained; used the auto-selected panel instead.")
+    if spec["slow"] and n_train > SLOW_ROW_LIMIT:
+        return None, resolved, (f"'{resolved}' was skipped — too slow for {n_train:,} training rows; "
+                                "used the auto-selected panel instead.")
+    return factory(), resolved, None
+
+
 def _preprocessor(df: pd.DataFrame, feats: list[str]) -> tuple[ColumnTransformer, list[str], list[str]]:
     num = [c for c in feats if pd.api.types.is_numeric_dtype(df[c])]
     cat = [c for c in feats if c not in num]
@@ -183,9 +245,23 @@ def modeler(state) -> dict:
           else StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=RS))
 
     candidates = _candidates(task)
+    auto_names = list(candidates)   # the reliable panel used to build the ensemble
     results: list[ModelResult] = []
     fitted: dict[str, Pipeline] = {}
     scored: dict[str, float] = {}  # internal higher-is-better CV score for selection
+
+    # optional: fold in the user's requested ML technique alongside the auto panel
+    user_note = None
+    user_model_name = None
+    if state.user_technique:
+        est, resolved, note = _resolve_user_technique(state.user_technique, task, len(X_tr))
+        if est is None:
+            user_note = note
+        elif resolved.lower().replace(" ", "") in {n.lower().replace(" ", "") for n in auto_names}:
+            user_note = f"Your pick ({resolved}) is already part of the auto-selected panel."
+        else:
+            user_model_name = f"{resolved} (your pick)"
+            candidates[user_model_name] = est
 
     for name, est in candidates.items():
         try:  # one bad model must not crash the pipeline (esp. on uploaded data)
@@ -209,10 +285,18 @@ def modeler(state) -> dict:
     if not scored:  # every model failed -> skip modeling rather than crash
         return {"log": state.log + ["modeler: all candidate models failed -> skipped"]}
 
-    # --- ensemble (soft-vote / average the panel) ---
+    # finalize the note about the user's requested technique
+    if user_model_name and user_note is None:
+        clean = user_model_name.replace(" (your pick)", "")
+        user_note = (f"Trained your requested technique ({clean}) and included it in the leaderboard."
+                     if user_model_name in scored else
+                     f"Your requested technique ({clean}) could not be trained (it errored during "
+                     "fitting); the auto-selected panel was used.")
+
+    # --- ensemble (soft-vote / average the AUTO panel only, for reliability) ---
     ens_result = None
     try:
-        ests = [(n, candidates[n]) for n in candidates]
+        ests = [(n, candidates[n]) for n in auto_names if n in fitted]
         ens = (VotingClassifier(ests, voting="soft") if task != "regression"
                else VotingRegressor(ests))
         pipe = Pipeline([("pre", pre), ("model", ens)])
@@ -257,7 +341,7 @@ def modeler(state) -> dict:
     leaderboard = ModelLeaderboard(
         task_type=task, target=target, metric_rationale=rationale,
         candidates=results, ensemble=ens_result, selected=best,
-        selection_reason=selection_reason,
+        selection_reason=selection_reason, user_technique_note=user_note,
     )
 
     # --- a finding for the report + Q&A ---
@@ -272,7 +356,8 @@ def modeler(state) -> dict:
         claim=(f"Best model is {best} with held-out {metric_name}="
                f"{best_res.test_score:.3f} (CV {best_res.cv_score:.3f}); "
                + (f"top drivers: {', '.join(n for n, _ in drivers[:3])}." if drivers else
-                  "feature importance unavailable.") + acc_note),
+                  "feature importance unavailable.") + acc_note
+               + (f" Note on your requested technique: {user_note}" if user_note else "")),
         evidence={"leaderboard": {r.name: r.test_score for r in results}
                   | ({"Ensemble": ens_result.test_score} if ens_result else {}),
                   "metric": metric_name, "cv_test_gap": overfit_gap,

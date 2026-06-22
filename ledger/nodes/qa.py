@@ -27,8 +27,9 @@ def _grounded_context(state) -> str:
         lb = state.model_leaderboard
         rows = "\n".join(f"  - {m.name}: {m.primary_metric}={m.test_score:.4f} (cv {m.cv_score:.4f})"
                          for m in lb.candidates)
+        note = f"\n  User-requested technique: {lb.user_technique_note}" if lb.user_technique_note else ""
         parts.append(f"## MODELS (target={lb.target}, metric rationale: {lb.metric_rationale})\n"
-                     f"{rows}\n  Selected: {lb.selected} — {lb.selection_reason}")
+                     f"{rows}\n  Selected: {lb.selected} — {lb.selection_reason}{note}")
     if state.dashboard_spec:
         parts.append("## DASHBOARD\n" + "\n".join(
             f"- {c.title} ({c.chart_type}): takeaway = {c.takeaway}; numbers = {c.underlying_numbers}"

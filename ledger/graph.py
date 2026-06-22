@@ -47,13 +47,14 @@ def build_graph():
 
 
 def run_analysis(dataset_path: str, question: str | None = None,
-                 target: str | None = None) -> AnalysisState:
+                 target: str | None = None, user_technique: str | None = None) -> AnalysisState:
     """Run the full pipeline and return the final state.
 
-    `target` optionally forces which column is the modeling target (overrides
-    auto-detection — the "pick your target column" feature)."""
+    `target` optionally forces the modeling target (overrides auto-detection).
+    `user_technique` optionally adds a user-requested ML technique to the model panel."""
     graph = build_graph()
-    initial = AnalysisState(dataset_path=dataset_path, question=question, target=target)
+    initial = AnalysisState(dataset_path=dataset_path, question=question,
+                            target=target, user_technique=user_technique)
     result = graph.invoke(initial)
     # langgraph returns a dict-like; coerce back to our typed model
     return AnalysisState.model_validate(result)

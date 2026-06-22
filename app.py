@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 from ledger.config import SETTINGS
 from ledger.graph import run_analysis
 from ledger.llm import get_llm
+from ledger.nodes.modeler import TECHNIQUE_CHOICES
 from ledger.nodes.qa import converse
 from ledger.report import render_report
 
@@ -64,7 +65,7 @@ div[data-testid="stChatMessage"] { animation: ledgerFade .45s ease-out; }
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="ledger-title">📊 Ledger — your AI data sidekick</div>',
+st.markdown('<div class="ledger-title">📊 Ledger — skip the analysis, keep the answers</div>',
             unsafe_allow_html=True)
 st.markdown('<div class="ledger-sub">Drop in any dataset and Ledger does the analyst grunt '
             "work — pokes around, builds the models, draws the charts, and chats with you about "
@@ -105,6 +106,13 @@ target_choice = st.sidebar.selectbox(
          "e.g. a regression target like a price or amount.")
 target = None if target_choice == "(auto-detect)" else target_choice
 
+technique_choice = st.sidebar.selectbox(
+    "Your ML technique (optional)", ["(let Ledger decide)"] + TECHNIQUE_CHOICES,
+    help="Add a technique to the panel Ledger trains. It runs ALONGSIDE the auto-selected "
+         "models. If it can't be trained (e.g. a regression technique on a classification "
+         "problem, or too slow for the data), the results will tell you.")
+user_technique = None if technique_choice == "(let Ledger decide)" else technique_choice
+
 run = st.sidebar.button("Run analysis", type="primary")
 
 if "state" not in st.session_state:
@@ -119,7 +127,7 @@ if run:
         path = _ensure_default_dataset()
         st.sidebar.info("Using flagship lending demo dataset.")
     with st.spinner("Analyzing… (training models can take ~15s)"):
-        st.session_state.state = run_analysis(path, None, target)
+        st.session_state.state = run_analysis(path, None, target, user_technique)
     st.session_state.chat = []  # fresh conversation for a new dataset
 
 state = st.session_state.state

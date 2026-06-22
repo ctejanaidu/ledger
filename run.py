@@ -26,12 +26,14 @@ def main() -> None:
     dataset = sys.argv[1] if len(sys.argv) > 1 else SETTINGS.default_dataset
     question = sys.argv[2] if len(sys.argv) > 2 else None
     target = sys.argv[3] if len(sys.argv) > 3 else None  # optional: force the target column
+    technique = sys.argv[4] if len(sys.argv) > 4 else None  # optional: add an ML technique
 
     mode = "LLM-enabled" if SETTINGS.has_api_key else "deterministic (no API key)"
     print(f"\n=== Ledger — running in {mode} mode ===")
-    print(f"Dataset: {dataset}" + (f"  (target={target})" if target else "") + "\n")
+    print(f"Dataset: {dataset}" + (f"  (target={target})" if target else "")
+          + (f"  (technique={technique})" if technique else "") + "\n")
 
-    state = run_analysis(dataset, question, target)
+    state = run_analysis(dataset, question, target, technique)
 
     print("--- DATA PROFILE ---")
     print(state.profile.quality_summary, "\n")
