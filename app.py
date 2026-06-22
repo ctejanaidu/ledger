@@ -39,7 +39,7 @@ def _ensure_default_dataset() -> str:
     return str(p)
 
 
-st.set_page_config(page_title="Ledger — your AI data sidekick", page_icon="📊", layout="wide")
+st.set_page_config(page_title="Ledger - Agentic Data Analyst Platform", page_icon="📊", layout="wide")
 
 # --- look & feel: subtle animations injected via CSS ---
 st.markdown("""
@@ -65,7 +65,7 @@ div[data-testid="stChatMessage"] { animation: ledgerFade .45s ease-out; }
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="ledger-title">📊 Ledger — skip the analysis, keep the answers</div>',
+st.markdown('<div class="ledger-title">📊 Ledger - Agentic Data Analyst Platform</div>',
             unsafe_allow_html=True)
 st.markdown('<div class="ledger-sub">Drop in any dataset and Ledger does the analyst grunt '
             "work — pokes around, builds the models, draws the charts, and chats with you about "

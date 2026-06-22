@@ -1,4 +1,4 @@
-# 📊 Ledger — skip the analysis, keep the answers
+# 📊 Ledger - Agentic Data Analyst Platform
 
 [![Live demo](https://img.shields.io/badge/🚀_live_demo-ledger--analyst.streamlit.app-ff4b4b)](https://ledger-analyst.streamlit.app)
 [![CI](https://github.com/ctejanaidu/ledger/actions/workflows/ci.yml/badge.svg)](https://github.com/ctejanaidu/ledger/actions/workflows/ci.yml)
