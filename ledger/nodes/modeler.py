@@ -29,6 +29,7 @@ from sklearn.model_selection import (KFold, StratifiedKFold, cross_val_score,
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
+from ..dataio import load_csv
 from ..state import ChartSpec, Finding, ModelLeaderboard, ModelResult
 from ..targeting import resolve_target, to_binary01
 from ..tools import charts
@@ -210,7 +211,7 @@ def _subsample(df, target, task):
 
 
 def modeler(state) -> dict:
-    df = pd.read_csv(state.dataset_path)
+    df = load_csv(state.dataset_path)
     profile = state.profile
     target = resolve_target(state.target, profile.target_candidates, list(df.columns))
     if target is None:

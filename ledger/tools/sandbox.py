@@ -29,7 +29,7 @@ _HARNESS = '''
 import pandas as pd
 import numpy as np
 
-df = pd.read_csv({csv_path!r})
+df = pd.read_csv({csv_path!r}, low_memory=False)
 for _c in df.columns:
     if "date" in _c.lower():
         try:

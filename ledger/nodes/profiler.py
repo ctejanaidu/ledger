@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import pandas as pd
 
+from ..dataio import load_csv
 from ..llm import complete
 from ..state import ColumnProfile, DatasetProfile
 
@@ -58,7 +59,7 @@ def _detect_time_column(df: pd.DataFrame) -> str | None:
 
 
 def profiler(state) -> dict:
-    df = pd.read_csv(state.dataset_path)
+    df = load_csv(state.dataset_path)
     n_rows = len(df)
 
     cols = []

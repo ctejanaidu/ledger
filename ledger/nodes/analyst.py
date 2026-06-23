@@ -15,6 +15,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from ..dataio import load_csv
 from ..state import ChartSpec, DashboardSpec, Finding
 from ..targeting import to_binary01
 from ..tools import charts
@@ -69,7 +70,7 @@ def _numeric_drivers(df: pd.DataFrame, target: str, exclude: set[str]) -> list[t
 
 
 def analyst(state) -> dict:
-    df = pd.read_csv(state.dataset_path)
+    df = load_csv(state.dataset_path)
     profile = state.profile
     findings: list[Finding] = []
     chart_specs: list[ChartSpec] = []

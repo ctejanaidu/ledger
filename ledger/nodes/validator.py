@@ -15,6 +15,9 @@ from __future__ import annotations
 
 import pandas as pd
 
+from ..dataio import load_csv
+from ..targeting import resolve_target, to_binary01
+
 _BANNED = ["production-ready", "guaranteed", "proven", "certain", "always",
            "will definitely", "100% accurate", "risk-free", "foolproof"]
 
@@ -34,14 +37,13 @@ def validator(state) -> dict:
     guardrails: list[str] = []
 
     # 1) independent recompute of the headline rate
-    target = next((c for c in (profile.target_candidates or [])
-                   if profile and c.lower() in {"default", "target", "label", "class", "fraud", "churn"}),
-                  None)
+    cols = [c.name for c in profile.columns] if profile else []
+    target = resolve_target(state.target, profile.target_candidates if profile else [], cols)
     if target:
         try:
-            col = pd.read_csv(state.dataset_path, usecols=[target])[target]
+            col = load_csv(state.dataset_path, usecols=[target])[target]
             if col.nunique(dropna=True) == 2:
-                recomputed = float(col.mean())
+                recomputed = float(to_binary01(col)[0].mean())
                 reported = next((f.evidence.get("rate") for f in findings
                                  if "Overall" in f.claim and "rate" in f.evidence), None)
                 if reported is not None and abs(recomputed - reported) > 0.005:

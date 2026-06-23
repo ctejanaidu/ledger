@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import pandas as pd
 
+from ..dataio import load_csv
 from ..state import Finding
 from ..targeting import resolve_target
 
@@ -45,7 +46,7 @@ def diagnostician(state) -> dict:
     if not target or not tcol:
         return {"log": state.log + ["diagnostician: no time+target -> skipped"]}
 
-    df = pd.read_csv(state.dataset_path)
+    df = load_csv(state.dataset_path)
     if target not in df or df[target].nunique() != 2:
         return {"log": state.log + ["diagnostician: target not binary -> skipped"]}
     df[tcol] = pd.to_datetime(df[tcol], errors="coerce")

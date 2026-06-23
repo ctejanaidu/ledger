@@ -15,6 +15,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import statsmodels.api as sm
 
+from ..dataio import load_csv
 from ..state import ChartSpec, Projection
 from ..targeting import resolve_target
 from ..tools import charts
@@ -41,7 +42,7 @@ def forecaster(state) -> dict:
     if not target or not tcol:
         return {"log": state.log + ["forecaster: no time+target -> skipped"]}
 
-    df = pd.read_csv(state.dataset_path)
+    df = load_csv(state.dataset_path)
     df[tcol] = pd.to_datetime(df[tcol], errors="coerce")
     ts = (df.dropna(subset=[tcol, target]).set_index(tcol)[target]
             .resample("MS").mean().dropna())
