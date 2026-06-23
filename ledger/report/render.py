@@ -150,30 +150,32 @@ def _limitations_html(state) -> str:
 
 
 _CSS = """
-:root{--ink:#1f2a44;--muted:#6b7280;--line:#e8ebf0;--accent:#2f6fed;}
-*{box-sizing:border-box}body{font-family:Inter,Helvetica,Arial,sans-serif;color:var(--ink);
-max-width:980px;margin:0 auto;padding:32px;line-height:1.5}
+:root{--bg:#0a0e16;--card:#111827;--ink:#e9edf5;--muted:#93a0b4;--line:#1f2a3d;--accent:#ff4d4d;}
+*{box-sizing:border-box}
+body{font-family:Inter,Helvetica,Arial,sans-serif;color:var(--ink);max-width:980px;margin:0 auto;
+padding:32px;line-height:1.5;
+background:radial-gradient(1000px 520px at 50% -8%, rgba(255,77,77,.10), transparent 60%), var(--bg);}
 header{border-bottom:3px solid var(--accent);padding-bottom:12px;margin-bottom:20px}
-h1{margin:0;font-size:26px}.sub{color:var(--muted);font-size:13px;margin-top:4px}
-h2{font-size:18px;margin:28px 0 10px;border-bottom:1px solid var(--line);padding-bottom:6px}
-.bluf{background:#f5f8ff;border-left:4px solid var(--accent);padding:14px 16px;border-radius:6px}
+h1{margin:0;font-size:26px;color:#fff}.sub{color:var(--muted);font-size:13px;margin-top:4px}
+h2{font-size:18px;margin:28px 0 10px;border-bottom:1px solid var(--line);padding-bottom:6px;color:#fff}
+.bluf{background:#141d2e;border-left:4px solid var(--accent);padding:14px 16px;border-radius:8px}
 .kpis{display:flex;gap:14px;flex-wrap:wrap;margin:18px 0}
-.kpi{flex:1;min-width:160px;background:#fff;border:1px solid var(--line);border-radius:10px;
-padding:14px 16px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
-.kpi-val{font-size:24px;font-weight:700}.kpi-label{color:var(--muted);font-size:12px;margin-top:2px}
+.kpi{flex:1;min-width:160px;background:var(--card);border:1px solid var(--line);border-radius:10px;
+padding:14px 16px}
+.kpi-val{font-size:24px;font-weight:700;color:#fff}.kpi-label{color:var(--muted);font-size:12px;margin-top:2px}
 .finding{display:flex;gap:10px;margin:10px 0;align-items:flex-start}
-.badge{color:#fff;border-radius:20px;padding:2px 10px;font-size:11px;text-transform:uppercase;
+.badge{color:#0a0e16;border-radius:20px;padding:2px 10px;font-size:11px;text-transform:uppercase;
 font-weight:700;white-space:nowrap;margin-top:2px}
 .finding-body p{margin:0}.method{color:var(--muted);font-size:12px}
 details summary{cursor:pointer;color:var(--accent);font-size:12px}
 table{width:100%;border-collapse:collapse;font-size:13px;margin:8px 0}
 th,td{border:1px solid var(--line);padding:6px 10px;text-align:left}
-th{background:#f7f9fc}tr.sel{background:#eaf6f0;font-weight:600}
+th{background:#141d2e}tr.sel{background:#1c2a22;font-weight:600}
 .note{color:var(--muted);font-size:12px}.lims li{color:var(--muted);font-size:13px}
 .charts{display:flex;flex-direction:column;gap:8px}
 footer{margin-top:28px;border-top:1px solid var(--line);padding-top:10px;color:var(--muted);font-size:12px}
-@media print{body{padding:0}.chart{break-inside:avoid}.finding{break-inside:avoid}
-.kpi{box-shadow:none}details{display:none}}
+@media print{body{padding:0;background:var(--bg)}.chart{break-inside:avoid}.finding{break-inside:avoid}
+details{display:none}}
 """
 
 

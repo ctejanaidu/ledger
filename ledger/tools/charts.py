@@ -12,21 +12,26 @@ from pathlib import Path
 import plotly.graph_objects as go
 import plotly.io as pio
 
-# --- executive theme ---------------------------------------------------------
-_INK = "#1f2a44"
-_ACCENT = "#2f6fed"
-_MUTED = "#6b7280"
-_GRID = "#e8ebf0"
+# --- dark "cinematic" theme (matches the app: near-black + coral-red accent) -----
+_CARD = "#111827"      # card background (matches app cards)
+_INK = "#e9edf5"       # off-white text
+_ACCENT = "#ff4d4d"    # coral red (primary)
+_MUTED = "#93a0b4"     # muted gray-blue
+_GRID = "#212c40"      # subtle grid lines
 
 _TEMPLATE = go.layout.Template(
     layout=go.Layout(
         font=dict(family="Inter, Helvetica, Arial, sans-serif", color=_INK, size=14),
-        colorway=[_ACCENT, "#15a07a", "#e8833a", "#b4458f", "#6b7280"],
-        paper_bgcolor="white",
-        plot_bgcolor="white",
-        title=dict(font=dict(size=18, color=_INK)),
-        xaxis=dict(gridcolor=_GRID, zerolinecolor=_GRID),
-        yaxis=dict(gridcolor=_GRID, zerolinecolor=_GRID),
+        # lead with red, then steel-blue / green / amber / purple / gray
+        colorway=[_ACCENT, "#4a90d9", "#36d399", "#e8a13a", "#a06cd5", "#93a0b4"],
+        paper_bgcolor=_CARD,
+        plot_bgcolor=_CARD,
+        title=dict(font=dict(size=18, color="#ffffff")),
+        xaxis=dict(gridcolor=_GRID, zerolinecolor=_GRID, linecolor=_GRID,
+                   tickfont=dict(color=_MUTED), title=dict(font=dict(color=_MUTED))),
+        yaxis=dict(gridcolor=_GRID, zerolinecolor=_GRID, linecolor=_GRID,
+                   tickfont=dict(color=_MUTED), title=dict(font=dict(color=_MUTED))),
+        legend=dict(font=dict(color=_INK)),
         margin=dict(l=60, r=30, t=80, b=110),
     )
 )
@@ -46,10 +51,15 @@ def style(fig: go.Figure, title: str, takeaway: str = "") -> go.Figure:
 
 
 def save_html(fig: go.Figure, out_dir: str, chart_id: str) -> str:
-    """Persist a chart as a standalone HTML fragment; return its path."""
+    """Persist a chart as a standalone HTML file; return its path.
+
+    The page body is set to the dark card color so the chart blends seamlessly
+    when embedded in the (dark) Streamlit app — no white frame around the plot."""
     Path(out_dir).mkdir(parents=True, exist_ok=True)
     path = str(Path(out_dir) / f"{chart_id}.html")
-    fig.write_html(path, include_plotlyjs="cdn", full_html=True)
+    html = fig.to_html(include_plotlyjs="cdn", full_html=True)
+    html = html.replace("<head>", f"<head><style>html,body{{margin:0;background:{_CARD};}}</style>", 1)
+    Path(path).write_text(html, encoding="utf-8")
     return path
 
 

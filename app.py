@@ -41,27 +41,66 @@ def _ensure_default_dataset() -> str:
 
 st.set_page_config(page_title="Ledger - Agentic Data Analyst Platform", page_icon="📊", layout="wide")
 
-# --- look & feel: subtle animations injected via CSS ---
+# --- look & feel: dark "cinematic" theme (red vignette + grid) + readable inputs ---
 st.markdown("""
 <style>
-/* slide + fade the main content in on load */
+/* dark backdrop: red radial glow + faint grid, matching the brand look */
+[data-testid="stAppViewContainer"] {
+  background:
+    radial-gradient(1100px 600px at 50% -8%, rgba(255,77,77,.12), transparent 60%),
+    radial-gradient(800px 600px at 100% 0%, rgba(255,77,77,.06), transparent 55%),
+    linear-gradient(rgba(255,255,255,.022) 1px, transparent 1px) 0 0 / 42px 42px,
+    linear-gradient(90deg, rgba(255,255,255,.022) 1px, transparent 1px) 0 0 / 42px 42px,
+    #0a0e16;
+}
+[data-testid="stHeader"] { background: transparent; }
+section[data-testid="stSidebar"] { background: #0d1320; border-right: 1px solid #1b2335; }
+
+/* slide + fade content in */
 section.main > div { animation: ledgerFade .6s ease-out; }
 @keyframes ledgerFade { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform:none; } }
-/* animated gradient wordmark */
-.ledger-title { font-size: 2.3rem; font-weight: 800; margin: 0 0 .1rem 0; line-height: 1.15;
-  background: linear-gradient(90deg,#2f6fed,#15a07a,#e8833a,#2f6fed);
+
+/* white wordmark with a red shimmer + red underline (echoes the logo) */
+.ledger-title { font-size: 2.35rem; font-weight: 800; margin: 0 0 .15rem 0; line-height: 1.15;
+  display:inline-block; padding-bottom:.18rem; border-bottom: 3px solid #ff4d4d;
+  background: linear-gradient(90deg,#ffffff,#ff8a8a,#ff4d4d,#ffffff);
   background-size: 300% auto; -webkit-background-clip: text; background-clip: text;
-  -webkit-text-fill-color: transparent; animation: ledgerShine 7s linear infinite; }
+  -webkit-text-fill-color: transparent; animation: ledgerShine 8s linear infinite; }
 @keyframes ledgerShine { to { background-position: 300% center; } }
-.ledger-sub { color:#6b7280; font-size: 1rem; margin-bottom: .4rem; }
-/* lift expanders / cards on hover */
-div[data-testid="stExpander"] { transition: transform .15s ease, box-shadow .15s ease; }
-div[data-testid="stExpander"]:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(31,42,68,.08); }
-/* chat bubbles fade in */
-div[data-testid="stChatMessage"] { animation: ledgerFade .45s ease-out; }
-/* buttons: gentle pop */
-.stButton > button { transition: transform .08s ease, box-shadow .15s ease; border-radius: 10px; }
-.stButton > button:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(47,111,237,.18); }
+.ledger-sub { color:#93a0b4; font-size: 1rem; margin: .35rem 0 .4rem 0; }
+
+/* cards / expanders: dark slate, red glow on hover */
+div[data-testid="stExpander"] { background:#111827; border:1px solid #1f2a3d; border-radius:12px;
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
+div[data-testid="stExpander"]:hover { transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(255,77,77,.10); border-color:#ff4d4d55; }
+
+/* chat bubbles */
+div[data-testid="stChatMessage"] { animation: ledgerFade .45s ease-out;
+  background:#111827; border:1px solid #1f2a3d; border-radius:12px; }
+
+/* buttons: red, with pop */
+.stButton > button { transition: transform .08s ease, box-shadow .18s ease; border-radius:10px; font-weight:600; }
+.stButton > button:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(255,77,77,.28); }
+.stButton > button[kind="primary"] { background:#ff4d4d; border:0; color:#fff; }
+.stButton > button[kind="primary"]:hover { background:#ff5e5e; }
+
+/* --- readable sidebar inputs (fix small/faint placeholders) --- */
+section[data-testid="stSidebar"] label p,
+section[data-testid="stSidebar"] [data-testid="stWidgetLabel"] p {
+  font-size: .95rem !important; font-weight: 600 !important; color:#e9edf5 !important; }
+section[data-testid="stSidebar"] [data-baseweb="input"],
+section[data-testid="stSidebar"] [data-baseweb="select"] > div {
+  background:#161f30 !important; border:1px solid #2a3650 !important; border-radius:9px !important;
+  min-height: 42px; font-size: .96rem !important; }
+section[data-testid="stSidebar"] input,
+section[data-testid="stSidebar"] [data-baseweb="select"] div { color:#eef2f8 !important; font-size:.96rem !important; }
+section[data-testid="stSidebar"] [data-baseweb="input"]:focus-within,
+section[data-testid="stSidebar"] [data-baseweb="select"] > div:focus-within { border-color:#ff4d4d !important; }
+input::placeholder, textarea::placeholder { color:#9aa6ba !important; opacity:1 !important; font-size:.95rem; }
+/* file uploader: clearer on dark */
+section[data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] {
+  background:#161f30 !important; border:1px dashed #2a3650 !important; }
 </style>
 """, unsafe_allow_html=True)
 
