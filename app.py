@@ -7,6 +7,7 @@ Run:  streamlit run app.py
 """
 from __future__ import annotations
 
+import base64
 import html
 import os
 import re
@@ -98,9 +99,11 @@ section[data-testid="stSidebar"] { background: #0d1320; border-right: 1px solid 
 section.main > div { animation: ledgerFade .6s ease-out; }
 @keyframes ledgerFade { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform:none; } }
 
-/* white wordmark with a red shimmer + red underline (echoes the logo) */
-.ledger-title { font-size: 2.35rem; font-weight: 800; margin: 0 0 .15rem 0; line-height: 1.15;
-  display:inline-block; padding-bottom:.18rem; border-bottom: 3px solid #ff4d4d;
+/* bar-chart logo + white/red shimmer wordmark + red underline (echoes the brand) */
+.ledger-head { display:inline-flex; align-items:center; gap:12px; margin:0 0 .15rem 0;
+  padding-bottom:.2rem; border-bottom:3px solid #ff4d4d; }
+.ledger-logo { flex:0 0 auto; display:block; }
+.ledger-title { font-size: 2.35rem; font-weight: 800; line-height: 1.15;
   background: linear-gradient(90deg,#ffffff,#ff8a8a,#ff4d4d,#ffffff);
   background-size: 300% auto; -webkit-background-clip: text; background-clip: text;
   -webkit-text-fill-color: transparent; animation: ledgerShine 8s linear infinite; }
@@ -159,7 +162,15 @@ section[data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] {
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="ledger-title">📊 Ledger - Agentic Data Analyst Platform</div>',
+_SVG_LOGO = (
+    "<svg xmlns='http://www.w3.org/2000/svg' width='30' height='34' viewBox='0 0 36 40'>"
+    "<rect x='2' y='20' width='9' height='18' rx='3.5' fill='#e9edf5'/>"
+    "<rect x='13.5' y='11' width='9' height='27' rx='3.5' fill='#e9edf5'/>"
+    "<rect x='25' y='2' width='9' height='36' rx='3.5' fill='#ff4d4d'/></svg>"
+)
+_LOGO = "data:image/svg+xml;base64," + base64.b64encode(_SVG_LOGO.encode()).decode()
+st.markdown(f'<div class="ledger-head"><img class="ledger-logo" src="{_LOGO}" alt="Ledger logo"/>'
+            '<span class="ledger-title">Ledger - Agentic Data Analyst Platform</span></div>',
             unsafe_allow_html=True)
 st.markdown('<div class="ledger-sub">Drop in any dataset and Ledger does the analyst grunt '
             "work — pokes around, builds the models, draws the charts, and chats with you about "
