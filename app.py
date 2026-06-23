@@ -7,10 +7,13 @@ Run:  streamlit run app.py
 """
 from __future__ import annotations
 
+import html
 import os
+import re
 import tempfile
 from pathlib import Path
 
+import markdown as _md
 import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
@@ -27,6 +30,41 @@ load_dotenv()
 # Chat avatars (easy to swap to any emoji or image URL)
 USER_AVATAR = "🧑‍💻"
 BOT_AVATAR = "🦉"
+
+
+_LIST_RE = re.compile(r"\s*([-*]|\d+\.)\s+")
+
+
+def _prep_md(text: str) -> str:
+    """python-markdown needs a blank line before a list. LLMs often omit it
+    (e.g. 'because:\\n- item'), so insert one (outside code fences)."""
+    out, in_fence = [], False
+    for line in text.split("\n"):
+        if line.lstrip().startswith("```"):
+            in_fence = not in_fence
+            out.append(line)
+            continue
+        if not in_fence and _LIST_RE.match(line) and out and out[-1].strip() \
+                and not _LIST_RE.match(out[-1]):
+            out.append("")
+        out.append(line)
+    return "\n".join(out)
+
+
+def _render_chat(history: list[dict]) -> str:
+    """Render the conversation as messaging-style bubbles: user right, analyst left."""
+    rows = []
+    for m in history:
+        if m["role"] == "user":  # plain text, escaped (no HTML injection from input)
+            body = "<p>" + html.escape(m["content"]).replace("\n", "<br>") + "</p>"
+            side, avatar = "user", USER_AVATAR
+        else:                    # assistant: render its markdown
+            body = _md.markdown(_prep_md(m["content"]),
+                                extensions=["fenced_code", "tables", "sane_lists", "nl2br"])
+            side, avatar = "bot", BOT_AVATAR
+        rows.append(f'<div class="lrow {side}"><div class="lav">{avatar}</div>'
+                    f'<div class="lbubble">{body}</div></div>')
+    return '<div class="lchat">' + "".join(rows) + "</div>"
 
 
 def _ensure_default_dataset() -> str:
@@ -101,6 +139,23 @@ input::placeholder, textarea::placeholder { color:#9aa6ba !important; opacity:1 
 /* file uploader: clearer on dark */
 section[data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] {
   background:#161f30 !important; border:1px dashed #2a3650 !important; }
+
+/* --- messaging-style chat bubbles (user right / analyst left) --- */
+.lchat { display:flex; flex-direction:column; gap:10px; margin:6px 0 24px 0; }
+.lrow { display:flex; gap:8px; align-items:flex-end; animation: ledgerFade .35s ease-out; }
+.lrow.bot { justify-content:flex-start; }
+.lrow.user { justify-content:flex-end; flex-direction:row-reverse; }
+.lav { font-size:1.3rem; line-height:1; flex:0 0 auto; padding-bottom:3px; }
+.lbubble { max-width:74%; padding:10px 14px; border-radius:16px; font-size:.96rem; line-height:1.5;
+  word-wrap:break-word; }
+.lrow.bot .lbubble { background:#1b2335; color:#e9edf5; border:1px solid #283448;
+  border-bottom-left-radius:5px; }
+.lrow.user .lbubble { background:#ff4d4d; color:#ffffff; border-bottom-right-radius:5px; }
+.lbubble p { margin:.18rem 0; } .lbubble p:first-child { margin-top:0; } .lbubble p:last-child { margin-bottom:0; }
+.lbubble ul, .lbubble ol { margin:.3rem 0 .3rem 1.15rem; padding:0; }
+.lbubble strong { font-weight:700; }
+.lbubble code { background:#0e1626; padding:1px 5px; border-radius:5px; font-size:.9em; }
+.lrow.user .lbubble code { background:rgba(255,255,255,.22); }
 </style>
 """, unsafe_allow_html=True)
 
@@ -225,18 +280,16 @@ if not st.session_state.chat:
             st.session_state.chat.append({"role": "user", "content": s})
             st.rerun()
 
-# render the conversation so far
-for m in st.session_state.chat:
-    with st.chat_message(m["role"], avatar=USER_AVATAR if m["role"] == "user" else BOT_AVATAR):
-        st.markdown(m["content"])
+# render the conversation so far as left/right bubbles
+if st.session_state.chat:
+    st.markdown(_render_chat(st.session_state.chat), unsafe_allow_html=True)
 
-# answer a pending user turn (from a starter button or a previous run)
+# answer a pending user turn (from a starter button or the chat input)
 if st.session_state.chat and st.session_state.chat[-1]["role"] == "user":
-    with st.chat_message("assistant", avatar=BOT_AVATAR):
-        with st.spinner("Thinking…"):
-            answer = converse(state, st.session_state.chat)
-        st.markdown(answer)
+    with st.spinner("Thinking…"):
+        answer = converse(state, st.session_state.chat)
     st.session_state.chat.append({"role": "assistant", "content": answer})
+    st.rerun()
 
 # chat input (pinned to the bottom by Streamlit)
 if prompt := st.chat_input("Ask about the data, models, or results…"):
